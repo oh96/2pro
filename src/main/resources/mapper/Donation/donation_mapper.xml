@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd"
+>
+<!-- 이 XML 을 어떤 interface 를 통해서 연결 할 건가? -->
+<mapper namespace="com.silver.donation.DonationDAO">
+	
+	<select id="donationListCall" resultType="hashmap">
+		SELECT do_idx, do_date, do_name, do_write, do_money 
+		FROM donation
+		order by do_idx desc limit 10 offset #{param1}	
+	</select>
+	
+	<select id="totalCount" resultType="int">
+		SELECT COUNT(do_idx) from donation
+	</select>
+	
+	<insert id="donationWrite" parameterType="hashmap">
+		INSERT INTO donation(do_date,do_name,do_goal,do_write,do_money)
+        VALUES(#{do_date},#{do_name},#{do_goal},#{do_write},#{do_money})
+	</insert>
+	
+	<select id="donationUpdateForm" 
+ 	resultType="donation" parameterType="int">
+ 		SELECT * from donation  where do_idx =#{param1}
+ 	</select>
+ 	
+ 	<update id="donationUpdate" parameterType="hashmap">
+ 		UPDATE donation set
+ 		do_date=#{do_date},
+ 		do_name=#{do_name},
+ 		do_goal=#{do_goal},
+ 		do_write=#{do_write},
+ 		do_money=#{do_money}
+ 		where do_idx=#{do_idx}
+ 	</update>
+ 	
+ 	<select id="searchdonationTotal" resultType="int">
+		select count(do_idx) from donation d
+		<if test="param1.equals('title')">
+			WHERE do_name LIKE CONCAT('%',#{param2},'%');
+		</if>
+		<if test="param1.equals('write')">
+			WHERE do_write LIKE CONCAT('%',#{param2},'%');
+		</if>
+	</select>
+	
+	<select id="searchdonation" resultType="donation">
+		SELECT do_idx,do_name,do_date,do_write,do_money from donation d 	
+		<if test="param1.equals('title')">
+			WHERE do_name=#{param2}
+		</if>
+		<if test="param1.equals('write')">
+			WHERE do_write=#{param2}
+		</if>
+		order by do_idx desc limit 10 offset #{param3}	
+	</select>
+</mapper>
+
+
+

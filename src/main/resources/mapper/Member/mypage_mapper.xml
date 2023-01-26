@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd"
+>
+
+<mapper namespace="com.silver.member.MypageDAO">
+	
+	<!-- 마이페이지 정보 가져오기 -->
+	<select id="mypage" resultType="member">
+	SELECT mem_name,mem_state,mem_gender,mem_id,mem_email,mem_birth,mem_pnum,mem_addr,mem_daddr,pos_name,part_name,mem_indate,dept_name,mem_outdate
+		from `member` m,`position`p,part p2 ,depart d 
+		where m.part_num = p2.part_num 
+		and m.pos_num =p.pos_num 
+		and m.dept_num =d.dept_num  
+		and m.mem_id =#{mem_id}
+	</select>
+	
+	<!-- 마이페이지 프로필 사진 가져오기  -->
+	<select id="mypage2" resultType="member" parameterType="String">
+	SELECT fp_idx, fp_oriFileName, fp_newFileName, fp_date, fpc_idx FROM filephoto WHERE mem_id=#{mem_id} and fpc_idx=9
+	</select>	
+	
+	<!-- 마이페이지 전자서명 가져오기 -->
+	<select id="mypage3" resultType="member" parameterType="String">
+	SELECT si_idx, si_oriFileName, si_newFileName, si_date FROM sign WHERE mem_id=#{mem_id}
+	</select>	
+	
+	<!-- 전자서명 수정폼 전자서명 가져오기 -->
+	<select id="SignView" resultType="member" parameterType="String">
+	SELECT si_idx, si_oriFileName, si_newFileName, si_date,mem_id FROM sign WHERE mem_id=#{memId}
+	</select>	
+	
+	<!-- 전자서명 유무 확인  -->
+	<select id="findsignphoto" resultType="member" parameterType="String">
+	SELECT si_idx, si_oriFileName, si_newFileName, si_date,mem_id FROM sign WHERE mem_id=#{memId}
+	</select>
+	
+	<!-- 전자서명 삽입  -->
+	<insert id="signphotoInsert">
+		INSERT INTO sign(si_oriFileName, si_newFileName, mem_id)
+			VALUES(#{param1}, #{param2}, #{param3})
+	</insert>
+	
+	<!-- 전자서명 업데이트 -->
+	<update id="signphotoUpdate">
+		UPDATE sign set si_oriFileName=#{param1}, si_newFileName=#{param2} where mem_id=#{param3}
+	</update>
+	
+	<!-- 마이페이지 아이디확인 -->
+	<select id="IDFind" resultType="member">
+		Select mem_id from member where mem_id=#{param1}
+	</select>
+	
+	<!-- 마이페이지 업데이트 개인정보 가져오기  -->
+	<select id="getMypageUpdateForm" resultType="member" parameterType="String">
+		SELECT mem_name,mem_state,mem_gender,mem_id,mem_email,mem_birth,mem_pnum,mem_addr,mem_daddr,pos_name,part_name,mem_indate,dept_name,mem_outdate
+			from `member` m,`position`p,part p2 ,depart d 
+			where m.part_num = p2.part_num 
+			and m.pos_num =p.pos_num 
+			and m.dept_num =d.dept_num  
+			and m.mem_id =#{memId}	
+	</select>
+	
+	<!-- 마이페이지 업데이트 개인 프로필 사진 가져오기 -->
+	<select id="photoMypageView" resultType="member" parameterType="String">
+	SELECT fp_idx, fp_oriFileName, fp_newFileName, fp_date, fpc_idx FROM filephoto WHERE mem_id=#{memId} and fpc_idx=9
+	</select>
+
+	<!-- 프로필 사진 삽입 -->
+	<insert id="photoInsert">
+		INSERT INTO filephoto(fp_oriFileName, fp_newFileName, mem_id, fpc_idx)
+			VALUES(#{param1}, #{param2}, #{param3}, 9)
+	</insert>
+	
+	<!-- 프로필 사진 업데이트 -->
+	<update id="photoUpdate">
+		UPDATE filephoto set fp_oriFileName=#{param1}, fp_newFileName=#{param2} where mem_id=#{param3} and fpc_idx=9
+	</update>
+	
+	<!-- 마이페이지 프로필 업데이트시 사진 유무 판별 -->	
+	<select id="findphoto" resultType="member" parameterType="String">
+	SELECT fp_idx, fp_oriFileName, fp_newFileName, fp_date, fpc_idx FROM filephoto WHERE mem_id=#{memId} and fpc_idx=9
+	</select>	
+	
+	<!-- 마이페이지 업데이트 -->
+	<update id="mypageUpdate" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+			UPDATE member SET mem_email=#{mem_email},mem_pnum=#{mem_pnum},mem_addr=#{mem_addr},mem_daddr=#{mem_daddr} 
+				WHERE mem_id=#{mem_id}
+	</update>
+	
+	<!-- 마이페이지 학력 리스트 총 인원수 -->	
+	<select id="totalCounteduList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) FROM edu where mem_id=#{memId} 
+	</select>
+	
+	<!-- 마이페이지 학력 리스트 -->
+	<select id="edulistCall" resultType="member" parameterType="member">
+		select * from edu where mem_id=#{mem_id} ORDER BY mem_id DESC limit 10 offset #{offset}
+	</select>
+	
+	<!-- 마이페이지 자격증 리스트 총 인원수 -->	
+	<select id="totalCountcertList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) FROM cert where mem_id=#{memId}
+	</select>
+
+	<!-- 마이페이지 자격증 리스트 -->
+	<select id="certlistCall" resultType="member" parameterType="member">
+		select * from cert where mem_id=#{mem_id} ORDER BY mem_id DESC limit 10 offset #{offset}
+	</select>	
+
+	<!-- 마이페이지 경력 리스트 총 인원수 -->	
+	<select id="totalCountcareerList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) FROM career where mem_id=#{memId}
+	</select>
+
+	<!-- 마이페이지 경력 리스트 -->
+	<select id="careerlistCall" resultType="member" parameterType="member">
+		select * from career where mem_id=#{mem_id} ORDER BY mem_id DESC limit 10 offset #{offset}
+	</select>
+	
+	<!-- 마이페이지 서류파일 리스트 총 갯수 -->	
+	<select id="totalCountpaperList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) FROM filephoto where mem_id=#{memId} and (fpc_idx=1 or fpc_idx=2 or fpc_idx=3 or fpc_idx=10)
+	</select>
+
+	<!-- 마이페이지 서류파일 리스트 가져오기 -->
+	<select id="paperlistCall" resultType="member" parameterType="member">
+		select * from filephoto where mem_id=#{mem_id} and (fpc_idx=1 or fpc_idx=2 or fpc_idx=3 or fpc_idx=10) ORDER BY mem_id DESC limit 10 offset #{offset}
+	</select>
+
+	<!-- 마이페이지 결제문서 리스트 총 갯수 -->	
+	<select id="totalCountmypaymentList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) FROM payment where mem_id=#{memId}
+	</select>
+
+	<!-- 마이페이지 결제문서 리스트 가져오기 -->
+	<select id="mypaymentlistCall" resultType="member" parameterType="member">
+		SELECT pm_subject,pm_idx,pm_state,pf_cate,m.pf_idx,m.mem_id
+		FROM payment m,payform p 
+		WHERE m.pf_idx  = p.pf_idx and m.mem_id =#{mem_id} ORDER BY mem_id DESC limit 10 offset #{offset}
+	</select>
+	
+	<!--학력 등록  -->		
+	<insert id="EduWrite" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+	insert into edu (mem_id,edu_name,edu_pass,edu_success,edu_start,edu_end)
+		values(#{mem_id},#{edu_name},#{edu_pass},#{edu_success},#{edu_start},#{edu_end})
+	</insert>	
+	
+	<!--자격증 등록  -->		
+	<insert id="CertWrite" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+		insert into cert(mem_id,ce_name,ce_place,ce_date) 
+			values (#{mem_id},#{ce_name},#{ce_place},#{ce_date})
+	</insert>		
+	
+	<!-- 경력 등록 -->
+	<insert id="CareerWrite" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+		insert into career (mem_id,ca_name,ca_work,ca_pos,ca_start,ca_end)
+			values(#{mem_id},#{ca_name},#{ca_work},#{ca_pos},#{ca_start},#{ca_end})
+	</insert>	
+	
+	
+	<!-- 자격증 수정폼 데이터 가져오기  -->
+	<select id="getMemberCertUpdateForm" resultType="member" parameterType="String">
+		SELECT * from cert where ce_name=#{Cename}
+	</select>
+	
+	<!-- 학력 수정폼 데이터 가져오기  -->
+	<select id="getMemberEduUpdateForm" resultType="member" parameterType="String">
+		SELECT * from edu where edu_name=#{Eduname}
+	</select>
+	
+	<!-- 경력 수정폼 데이터 가져오기  -->
+	<select id="getMemberCareerUpdateForm" resultType="member" parameterType="String">
+		SELECT * from career where ca_name=#{Caname}
+	</select>
+	
+	<!-- 마이페이지 학력 수정  -->	
+	<update id="EduUpdate" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+		UPDATE edu set mem_id=#{mem_id},edu_name=#{edu_name},edu_pass=#{edu_pass},edu_success=#{edu_success},edu_start=#{edu_start},edu_end=#{edu_end} 
+			where edu_idx=#{edu_idx}
+	</update>	
+	
+	<!-- 마이페이지 자격증 수정 -->	
+	<update id="CertUpdate" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+		UPDATE cert set mem_id=#{mem_id},ce_name=#{ce_name},ce_place=#{ce_place},ce_date=#{ce_date}
+			where ce_idx=#{ce_idx}
+	</update>	
+	
+	<!-- 마이페이지 경력 수정 -->	
+	<update id="CareerUpdate" useGeneratedKeys="true" keyColumn="mem_id" keyProperty="mem_id" parameterType="member">
+		UPDATE career set mem_id=#{mem_id},ca_name=#{ca_name},ca_work=#{ca_work},ca_pos=#{ca_pos},ca_start=#{ca_start},ca_end=#{ca_end}
+			where ca_idx=#{ca_idx}
+	</update>	
+	
+	<!--마이페이지 비빌번호 수정  -->
+	<update id="ChangePassword" parameterType="hashmap">
+		UPDATE member set mem_id=#{memId},mem_pw=#{pw} WHERE mem_id=#{memId}	
+	</update>	
+	
+	<!-- 마이페이지 서류파일 카테고리 번호 추출 -->	
+	<select id="findFpcidx" resultType="int">
+		SELECT fpc_idx FROM filephotocode WHERE fpc_cate=#{fpc_cate}
+	</select>
+	
+	<!-- 마이페이지 서류파일 등록  -->
+	<insert id="PFileInsert" >
+	INSERT INTO filephoto(fp_oriFileName, fp_newFileName, mem_id, fpc_idx)
+			VALUES(#{param1},#{param2},#{param3},#{param4})
+	</insert>
+	
+	<!-- 해당 서류파일 정보 뽑기  -->
+	<select id="Finddoucment" resultType="member" parameterType="String">
+		SELECT * FROM filephoto WHERE fp_idx=#{fpidx}
+	</select>
+	
+	<!-- 해당 서류파일 카테고리 가져오기 -->
+	<select id="FindFpcateName" resultType="member" parameterType="int">
+		SELECT fpc_cate FROM filephotocode WHERE fpc_idx=#{fpc_idx}
+	</select>
+	
+	<!-- 마이페이지 서류파일 업데이트  -->
+	<update id="PFileUpdate">
+	UPDATE filephoto set fp_oriFileName=#{param1}, fp_newFileName=#{param2},mem_id=#{param3},fpc_idx=#{param4}
+		WHERE fp_idx=#{param5}
+	</update>
+	
+</mapper>

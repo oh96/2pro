@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd"
+>
+
+<!-- 이 XML 을 어떤 interface 를 통해서 연결 할 건가? -->
+<mapper namespace="com.silver.item.ThingDAO">
+	
+	<!-- 비품 리스트 -->
+	<select id="getThingList" resultType="thing">
+		SELECT th_idx, th_name, th_part, th_date, th_state from thing ORDER BY th_idx DESC limit 10 offset #{param1}
+	</select>
+	
+	<!-- 비품 리스트 필터 검색 -->
+	<select id="getThingListSearch" resultType="thing" parameterType="thing">
+		SELECT th_idx, th_name, th_part, th_date, th_state FROM thing
+			WHERE
+				th_name LIKE CONCAT('%',#{th_name},'%')
+				AND th_part LIKE CONCAT('%',#{th_part},'%')
+				AND th_write LIKE CONCAT('%',#{th_write},'%')
+				AND th_state LIKE CONCAT(#{th_state},'%')
+				AND th_spon LIKE CONCAT('%',#{th_spon},'%')
+			ORDER BY th_idx DESC limit 10 offset #{offset}
+	</select>
+	
+	<!-- 리스트 카운트 -->
+	<select id="totalCountThList" resultType="int">
+		SELECT COUNT(th_idx) FROM thing;
+	</select>
+	
+	<!-- 리스트 필터 카운트 -->
+	<select id="totalCountThFilterList" resultType="int" parameterType="hashmap">
+		SELECT COUNT(th_idx) FROM thing WHERE 
+			th_name LIKE CONCAT('%',#{thName},'%')
+			AND th_part LIKE CONCAT('%',#{thPart})
+			AND th_write LIKE CONCAT('%',#{thWrite},'%')
+			AND th_state LIKE CONCAT(#{thState},'%')
+			AND th_spon LIKE CONCAT('%',#{thSpon},'%');
+	</select>
+	
+	<!-- 비품 상세보기 -->
+	<select id="getThingDetail" resultType="thing" parameterType="String">
+		SELECT t.*, i.it_name FROM thing t 
+			INNER JOIN item i ON t.it_idx = i.it_idx 
+		WHERE t.th_idx = #{thIdx}
+	</select>
+	
+	<!-- 사진 정보 -->
+	<select id="photoView" resultType="thing" parameterType="String">
+		SELECT fp_idx, fp_oriFileName, fp_newFileName, fp_date, fpc_idx FROM filephoto WHERE th_idx=#{thIdx}
+	</select>
+	
+	<!-- 비품 등록 -->
+	<insert id="thingWrite" 
+	useGeneratedKeys="true"
+	keyColumn="th_idx"
+	keyProperty="th_idx"
+	parameterType="thing">
+		<choose>
+			<when test="th_part.equals('후원')">
+				INSERT into thing(it_idx, th_name, th_part, th_date, th_model, th_money, th_write, th_spon)
+					VALUES(#{it_idx}, #{th_name}, #{th_part}, #{th_date}, #{th_model}, #{th_money}, #{th_write}, #{th_spon})
+			</when>
+			<otherwise>
+				INSERT into thing(it_idx, th_name, th_part, th_date, th_model, th_money, th_write)
+					VALUES(#{it_idx}, #{th_name}, #{th_part}, #{th_date}, #{th_model}, #{th_money}, #{th_write})
+			</otherwise>
+		</choose>
+	</insert>
+	
+	<insert id="photoInsert">
+		INSERT INTO filephoto(fp_oriFileName, fp_newFileName, th_idx, fpc_idx)
+			VALUES(#{param1}, #{param2}, #{param3}, 6)
+	</insert>
+	
+	<select id="thingCheck" parameterType="String" resultType="String">
+		SELECT th_name FROM thing WHERE th_name = #{thName}
+	</select>
+	
+	<update id="thingUpdate" parameterType="hashmap">
+		UPDATE thing SET 
+			th_part = #{thPart}, th_date = #{thDate}, th_model = #{thModel}, 
+			th_money=#{thMoney}, th_write=#{thWrite}, th_spon=if(th_part='후원', #{thSpon}, '직접 구매') 
+		WHERE th_idx = #{thIdx}
+	</update>
+	
+	<update id="photoUpdate">
+		UPDATE filephoto SET 
+			fp_oriFileName=#{param1}, fp_newFileName=#{param2} 
+		WHERE th_idx=#{param3}
+	</update>
+	
+	<select id="itemCateList" resultType="thing">
+		SELECT i.it_idx, i.it_name, count(t.it_idx) AS itCnt
+			from item i left outer join thing t on  i.it_idx = t.it_idx
+			WHERE NOT i.it_idx=1
+		GROUP BY i.it_idx ORDER BY count(t.it_idx) desc
+	</select>
+	
+	<!-- 카테고리 검색 -->
+	<select id="getItemSearch" parameterType="String" resultType="thing">
+		SELECT i.it_idx, i.it_name, COUNT(t.it_idx) AS itCnt
+			FROM item i LEFT OUTER JOIN thing t ON i.it_idx = t.it_idx
+		WHERE NOT i.it_idx=1 
+		AND i.it_name LIKE CONCAT('%',#{itName},'%')
+		GROUP BY i.it_idx ORDER BY count(t.it_idx) DESC;
+	</select>
+	
+	<insert id="itemCateResist" parameterType="String">
+		INSERT INTO item(it_name) VALUES(#{cateName})
+	</insert>
+	
+	<select id="cateNameCheck" parameterType="String" resultType="String">
+		SELECT it_name from item WHERE it_name = #{cateName}
+	</select>
+	
+	<update id="itemCateUpdate">
+		UPDATE item set it_name=#{param2} WHERE it_idx=#{param1}
+	</update>
+	
+	<!-- 비품 관리대장 -->
+	<select id="totalCntThManage" resultType="int">
+		SELECT COUNT(cntManage.it_name) FROM (SELECT i.it_name, t.th_model
+			from thing t left outer join item i on t.it_idx = i.it_idx
+		GROUP BY t.th_model) AS cntManage;
+	</select>
+	
+	<select id="getThingManageList" resultType="thing" parameterType="int">
+		SELECT i.it_name, t.th_model, t.th_part, t.th_money, count(th_name) AS thCnt, sum(th_money) AS sumMoney, t.th_write 
+			from thing t left outer join item i on t.it_idx = i.it_idx
+		GROUP BY t.th_model ORDER BY thCnt DESC LIMIT 10 offset #{offset}
+	</select>
+	
+	<select id="getThingManageSearch" resultType="thing" parameterType="thing">
+		SELECT i.it_name, t.th_model, t.th_part, t.th_date, t.th_money, count(th_name) AS thCnt, sum(th_money) AS sumMoney
+			from thing t left outer join item i on t.it_idx = i.it_idx
+		WHERE
+			i.it_name LIKE CONCAT('%',#{th_name},'%')
+			AND t.th_part LIKE CONCAT('%',#{th_part})
+			AND t.th_model LIKE CONCAT('%',#{th_model},'%')
+		GROUP BY t.th_model ORDER BY thCnt DESC limit 10 offset #{offset};
+	</select>
+	
+	<select id="totalCountManageSearch" resultType="int" parameterType="hashmap">
+		SELECT COUNT(it_name) FROM 
+			(SELECT i.it_name, t.th_model, t.th_part, t.th_date, t.th_money, count(th_name) AS thCnt, sum(th_money) AS thMoney
+			from thing t left outer join item i on t.it_idx = i.it_idx
+		WHERE
+			i.it_name LIKE CONCAT('%',#{thName},'%')
+			AND t.th_part LIKE CONCAT('%',#{thPart})
+			AND t.th_model LIKE CONCAT('%',#{thModel},'%')
+		GROUP BY t.th_model ORDER BY thCnt) AS cntManage;
+	</select>
+	
+	<!-- 비품 사용 기록 -->
+	<select id="totalCntThHistory" resultType="int">
+		SELECT COUNT(cnt.th_name) FROM (SELECT th.his_idx, t.th_name, t.th_part, th.his_name, th.his_rent, th.his_return, t.th_state FROM thing t 
+			left outer join thinghistory th  on th.th_idx = t.th_idx 
+		WHERE t.th_state = '비사용중' GROUP BY t.th_name HAVING COUNT(t.th_name)) as cnt
+	</select>
+	
+	<select id="getThingHistoryList" resultType="thing" parameterType="int">
+		SELECT th.his_idx, t.th_name, t.th_part, th.his_name, th.his_rent, th.his_return, t.th_state FROM thing t 
+			left outer join thinghistory th  on th.th_idx = t.th_idx 
+		WHERE t.th_state = '비사용중' GROUP BY t.th_name HAVING COUNT(t.th_name)
+			order by th.his_idx DESC limit 10 offset #{params}
+	</select>
+	
+	<!-- 비품 사용 내역 필터검색 페이징 -->
+	<select id="totalCountHistorySearch" parameterType="hashmap" resultType="int">
+		SELECT COUNT(t.th_name) FROM thing t 
+			left outer join thinghistory th  on th.th_idx = t.th_idx
+			WHERE
+			<choose>
+				<when test="hisName.equals('') or hisName==null">
+					t.th_name LIKE CONCAT('%',#{thName},'%')
+					AND t.th_model LIKE CONCAT('%',#{thModel},'%')
+					<if test="checkAllView.equals('비사용중')">
+						AND t.th_state LIKE CONCAT('%',#{checkAllView},'%')
+					</if>
+					<if test="checkAllView.equals('전체')">
+						AND t.th_state LIKE CONCAT('%','','%')
+					</if>
+				</when>
+				<otherwise>
+					t.th_name LIKE CONCAT('%',#{thName},'%')
+					AND t.th_model LIKE CONCAT('%',#{thModel},'%')
+					AND th.his_name LIKE CONCAT('%',#{hisName},'%')
+					<if test="checkAllView.equals('비사용중')">
+						AND t.th_state LIKE CONCAT('%',#{checkAllView},'%')
+					</if>
+					<if test="checkAllView.equals('전체')">
+						AND t.th_state LIKE CONCAT('%','','%')
+					</if>
+				</otherwise>
+			</choose>
+	</select>
+	
+	<!-- 비품 사용내역 검색 -->
+	 <select id="getThingHistorySearch" parameterType="thing" resultType="thing">
+		SELECT th.his_idx, t.th_name, t.th_part, th.his_name, th.his_rent, th.his_return, t.th_state FROM thing t 
+			left outer join thinghistory th  on th.th_idx = t.th_idx
+		WHERE
+		<choose>
+			<when test="his_name.equals('') or his_name==null">
+				t.th_name LIKE CONCAT('%',#{th_name},'%')
+				AND t.th_model LIKE CONCAT('%',#{th_model},'%')
+				<if test="th_state.equals('비사용중')">
+					AND t.th_state LIKE CONCAT('%',#{th_state},'%')
+				</if>
+				<if test="th_state.equals('전체')">
+					AND t.th_state LIKE CONCAT('%','','%')
+				</if>
+			</when>
+			<otherwise>
+				t.th_name LIKE CONCAT('%',#{th_name},'%')
+				AND t.th_model LIKE CONCAT('%',#{th_model},'%')
+				AND th.his_name LIKE CONCAT('%',#{his_name},'%')
+				<if test="th_state.equals('비사용중')">
+					AND t.th_state LIKE CONCAT('%',#{th_state},'%')
+				</if>
+				<if test="th_state.equals('전체')">
+					AND t.th_state LIKE CONCAT('%','','%')
+				</if>
+			</otherwise>
+		</choose>
+		ORDER BY th.his_idx DESC limit 10 offset #{offset}
+	</select>
+	
+	<!-- 비품 사용 내역 등록 -->
+	<select id="getThIdx" resultType="int" parameterType="String">
+		SELECT th_idx FROM thing WHERE th_name=#{thName}
+	</select>
+	
+	<insert id="thingHistoryWrite" parameterType="hashmap">
+			<choose>
+				<when test="hisBigo==null or hisBigo.equals('')">
+					INSERT into thinghistory(th_idx, his_write, his_name, his_rent, his_goal)
+						values(#{thIdx}, #{hisWrite}, #{hisName}, #{hisRent}, #{hisGoal});
+				</when>
+				<otherwise>
+					INSERT into thinghistory(th_idx, his_write, his_name, his_rent, his_goal, his_bigo)
+						values(#{thIdx}, #{hisWrite}, #{hisName}, #{hisRent}, #{hisGoal}, #{hisBigo});
+				</otherwise>
+			</choose>
+	</insert>
+	
+	<update id="writeThState" parameterType="int">
+		update thing set th_state='사용중' where th_idx=#{thIdx};
+	</update>
+	
+	<!-- 비품 사용 내역 상세보기 -->
+	<select id="getThingHistoryDetail" resultType="thing" parameterType="String">
+		SELECT th.his_idx, th.his_write, t.th_part, t.th_name, t.th_model, t.th_date, th.his_name, th.his_rent, th.his_return, th.his_goal, t.th_spon, t.th_state, th.his_bigo, t.th_money FROM thing t 
+			INNER JOIN thinghistory th on t.th_idx = th.th_idx
+		WHERE th.his_idx = #{hisIdx}
+	</select>
+	
+	<!-- 비품 사용 내역 수정 -->
+	<update id="updateThingHistory" parameterType="hashmap">
+		UPDATE thinghistory th
+			INNER JOIN thing t on th.th_idx = t.th_idx
+			<choose>
+				<when test="check==1">
+					<set>
+						th.his_name=#{hisName}, th.his_write=#{hisWrite}, th.his_goal=#{hisGoal}, 
+						t.th_state = #{thState}, th.his_rent=#{hisRent}, th.his_return=#{hisReturn},
+						<if test="!hisBigo.equals('')">
+							th.his_bigo=#{hisBigo}
+						</if>
+						<if test="hisBigo.equals('')">
+							th.his_bigo='없음'
+						</if>
+					</set>
+				</when>
+				<otherwise>
+					<set>
+						th.his_name=#{hisName}, th.his_write=#{hisWrite}, th.his_goal=#{hisGoal}, 
+						th.his_rent=#{hisRent}, th.his_return='1900-01-01', t.th_state = #{thState},
+						<if test="!hisBigo.equals('')">
+							th.his_bigo=#{hisBigo}
+						</if>
+						<if test="hisBigo.equals('')">
+							th.his_bigo='없음'
+						</if>
+					</set>
+				</otherwise>
+			</choose>
+			<where>
+				th.his_idx = #{hisIdx}
+			</where>
+	</update>
+	
+	<!-- 비품 예약 페이징 카운트 -->
+	<select id="totalCountThBookList" resultType="int">
+		SELECT COUNT(cb_idx) FROM book 
+		WHERE car_idx IS NULL AND b_cancel = 1
+		ORDER BY cb_idx DESC
+	</select>
+	
+	<!-- 비품 예약 -->
+	<select id="getThingBookList" resultType="thing" parameterType="int">
+		SELECT b.cb_idx, t.th_name, b.b_start, b.b_end, r.re_name, m.mem_name, b_cancel FROM book b 
+			INNER JOIN thing t ON b.th_idx = t.th_idx
+			LEFT OUTER JOIN resident r ON b.re_idx= r.re_idx
+			LEFT OUTER JOIN `member` m ON b.mem_id = m.mem_id
+		WHERE b.car_idx IS NULL 
+			AND b_cancel = 1
+		ORDER BY cb_idx DESC LIMIT 10 OFFSET #{offset}
+	</select>
+	
+	<!-- 비품 예약 검색 페이징 -->
+	<select id="totalCountBookSearch" resultType="int" parameterType="hashmap">
+		SELECT COUNT(b.cb_idx) from book b 
+			inner join thing t on b.th_idx = t.th_idx
+			left outer join resident r on b.re_idx= r.re_idx
+			left outer join `member` m on b.mem_id = m.mem_id
+		WHERE b.car_idx is null
+			<if test="checkAllView.equals('비사용중')">
+				AND b_cancel = 1
+				AND t.th_name LIKE CONCAT('%',#{thName},'%')
+				AND(r.re_name LIKE CONCAT('%',#{userName},'%')
+				or m.mem_name LIKE CONCAT('%',#{userName},'%'))
+				AND b.b_start LIKE CONCAT('%',#{bStart},'%')
+			</if>
+			<if test="checkAllView.equals('전체')">
+				AND t.th_name LIKE CONCAT('%',#{thName},'%')
+				AND(r.re_name LIKE CONCAT('%',#{userName},'%')
+				or m.mem_name LIKE CONCAT('%',#{userName},'%'))
+				AND b.b_start LIKE CONCAT('%',#{bStart},'%')
+			</if>
+	</select>
+	
+	<!-- 비품 예약 검색 -->
+	<select id="getThingBookSearch" resultType="thing" parameterType="thing">
+		SELECT b.cb_idx, t.th_name, b.b_start, b.b_end, b.b_write, r.re_name, m.mem_name, b_cancel from book b 
+			inner join thing t on b.th_idx = t.th_idx
+			left outer join resident r on b.re_idx= r.re_idx
+			left outer join `member` m on b.mem_id = m.mem_id
+		WHERE b.car_idx is null
+			<if test="bookCancelFake.equals('비사용중')">
+				AND b_cancel = 1
+				AND t.th_name LIKE CONCAT('%',#{th_name},'%')
+				AND(r.re_name LIKE CONCAT('%',#{userName},'%')
+				or m.mem_name LIKE CONCAT('%',#{userName},'%'))
+				AND b.b_start LIKE CONCAT('%',#{b_startFake},'%')
+			</if>
+			<if test="bookCancelFake.equals('전체')">
+				AND t.th_name LIKE CONCAT('%',#{th_name},'%')
+				AND(r.re_name LIKE CONCAT('%',#{userName},'%')
+				or m.mem_name LIKE CONCAT('%',#{userName},'%'))
+				AND b.b_start LIKE CONCAT('%',#{b_startFake},'%')
+			</if>
+		ORDER BY b.cb_idx DESC limit 10 offset #{offset}
+	</select>
+	
+	<!-- 비품등록 - 사용자 - 입소자 -->
+	<select id="totalCntThResiList" resultType="int">
+		SELECT COUNT(re_idx) from resident
+	</select>
+	<select id="thingResidentList" resultType="thing" parameterType="int">
+		SELECT re_idx, re_name from resident limit 10 offset #{offset}
+	</select>
+	<select id="totalCountThResiSearch" resultType="int" parameterType="hashmap">
+		SELECT COUNT(re_idx) from resident
+		where
+			<choose>
+				<when test="id != null and !id.equals('')">
+					re_idx = #{id}
+					AND re_name LIKE CONCAT('%',#{name},'%')
+				</when>
+				<otherwise>
+					re_name LIKE CONCAT('%',#{name},'%')
+				</otherwise>
+			</choose>
+	</select>
+	<select id="geThResiSearch" resultType="thing" parameterType="thing">
+		SELECT re_idx, re_name from resident
+		where
+			<choose>
+				<when test="re_idx != null and !re_idx.equals('')">
+					re_idx = #{re_idx}
+					AND re_name LIKE CONCAT('%',#{re_name},'%')
+				</when>
+				<otherwise>
+					re_name LIKE CONCAT('%',#{re_name},'%')
+				</otherwise>
+			</choose>
+		limit 10 offset #{offset}
+	</select>
+	
+	<!-- 비품등록 - 사용자 - 직원 -->
+	<select id="totalCntThMemiList" resultType="int">
+		SELECT COUNT(mem_id) from `member`
+	</select>
+	<select id="thingMemberList" resultType="thing" parameterType="int">
+		SELECT mem_id, mem_name from `member` limit 10 offset #{offset}
+	</select>
+	<select id="totalCountThMemSearch" resultType="int" parameterType="hashmap">
+		SELECT COUNT(mem_id) from `member`
+		where
+			<choose>
+				<when test="id != null and !id.equals('')">
+					mem_id = #{id}
+					AND mem_name LIKE CONCAT('%',#{name},'%')
+				</when>
+				<otherwise>
+					mem_name LIKE CONCAT('%',#{name},'%')
+				</otherwise>
+			</choose>
+	</select>
+	<select id="geThMemSearch" resultType="thing" parameterType="thing">
+		SELECT mem_id, mem_name from `member`
+		where
+			<choose>
+				<when test="mem_id != null and !mem_id.equals('')">
+					mem_id = #{mem_id}
+					AND mem_name LIKE CONCAT('%',#{mem_name},'%')
+				</when>
+				<otherwise>
+					mem_name LIKE CONCAT('%',#{mem_name},'%')
+				</otherwise>
+			</choose>
+		limit 10 offset #{offset}
+	</select>
+	
+	<!-- 예약 중복 날짜 체크 -->
+	<select id="thBookCheck" resultType="int" parameterType="hashmap">
+		select COUNT(cb_idx) 
+		from book
+		where th_idx = #{thIdx}
+			and b_cancel =1 
+			and b_start <![CDATA[<]]> #{bEnd}
+			and b_end <![CDATA[>]]> #{bStart}
+	</select>
+	<!-- 예약 등록 -->
+	<insert id="thingBookWrite" parameterType="hashmap">
+		<if test="select.equals('입소자')">
+			INSERT INTO book(th_idx, b_write, b_start, b_end, re_idx) 
+				VALUES(#{thIdx}, #{bookWriter}, #{bStart}, #{bEnd}, #{userId})
+		</if>
+		<if test="select.equals('직원')">
+			INSERT INTO book(th_idx, b_write, b_start, b_end, mem_id) 
+				VALUES(#{thIdx}, #{bookWriter}, #{bStart}, #{bEnd}, #{userId})
+		</if>
+	</insert>
+	
+	<!-- 비품 예약 상세보기 -->
+	<select id="getThingBookDetail" parameterType="String" resultType="thing">
+		SELECT b.cb_idx, t.th_name, b.b_start, b.b_end, r.re_name, m.mem_name, b.b_write, b.b_cancel, b.b_content from book b 
+			inner join thing t on b.th_idx = t.th_idx
+			left outer join resident r on b.re_idx= r.re_idx
+			left outer join `member` m on b.mem_id = m.mem_id
+		WHERE b.cb_idx = #{cbIdx}
+	</select>
+	
+	<update id="thingBookCancel">
+		UPDATE book SET b_cancel = 0, b_content=#{param2}, b_write=#{param3} WHERE cb_idx = #{param1}
+	</update>
+	
+</mapper>

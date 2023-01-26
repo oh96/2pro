@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd"
+>
+
+<!-- 이 XML 을 어떤 interface 를 통해서 연결 할 건가? -->
+<mapper namespace="com.silver.payment.PaymentDAO">
+	<select id="MyPayListCall" resultType="payment">
+		select p.pm_idx,p.pm_subject,p2.pf_cate,m.mem_name,p.pm_state 
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where m.mem_id =#{param1}
+					order by p.pm_idx desc limit 10 offset #{param2};
+	</select>
+	
+	<select id="MyPayListCallTotal" resultType="int">
+		select count(p.pm_idx)
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where m.mem_id =#{param1}
+	</select>
+	
+	<select id="modalPayFormList" resultType="payment">
+		select p.pf_idx ,p.pf_cate ,p.pf_content ,p.pf_count,p.pf_subject,m.mem_name 
+			from payform p,member m  where p.pf_write =m.mem_id 
+			<if test="param1.equals('휴가')">
+				and p.pf_cate ='휴가'
+			</if>
+			<if test="param1.equals('지출결의서')">
+				and p.pf_cate ='지출결의서'
+			</if>
+			<if test="param1.equals('품의서')">
+				and p.pf_cate ='품의서'
+			</if>
+			<if test="param1.equals('경위서')">
+				and p.pf_cate ='경위서'
+			</if>
+				order by p.pf_count desc
+	</select>
+	
+	<select id="PayMentReferCho_ajax" resultType="payment">
+		select m.mem_id ,m.mem_name ,m.mem_state ,d.dept_name ,p.pos_name,d.dept_code,p.pos_level,d.dept_num,m.dept_num  from member m 
+inner join depart d on m.dept_num =d.dept_num 
+inner join `position` p ON m.pos_num =p.pos_num where m.mem_state='재직중' order by p.pos_num 
+	</select>
+	
+	<select id="referDept" resultType="payment">
+		select * from depart d order by dept_num desc
+	</select>
+	
+	<select id="PayOrgCall" resultType="payment">
+		select m.mem_id ,m.mem_name ,m.mem_state ,d.dept_name ,p.pos_name,d.dept_code,p.pos_level,d.dept_num,m.dept_num  from member m 
+		inner join depart d on m.dept_num =d.dept_num 
+		inner join `position` p ON m.pos_num =p.pos_num where m.mem_state='재직중' 
+			and p.pos_num &lt; #{param1} order by p.pos_num
+	</select>
+	
+	<insert id="PayMentInsert_First" parameterType="payment" useGeneratedKeys="true" keyColumn="pm_idx"
+	keyProperty="pm_idx">
+		insert into payment(pm_dept,pm_bigo,pm_open,pm_subject,pm_content,pf_idx,mem_id) values(
+			#{pm_dept},#{pm_bigo},#{pm_open},#{pm_subject},#{pm_content},#{pf_idx},#{mem_id}
+		)
+	</insert>
+	
+	<insert id="PayMentHoli" parameterType="payment">
+	insert into payholiday(pm_idx,ho_start,ho_end,ho_type) values(
+		#{pm_idx},#{ho_start},#{ho_end},#{ho_type}
+		)
+	</insert>
+	
+	<select id="TeamMember" resultType="string">
+		select m.mem_id from `member` m inner join depart d on m.dept_num =d.dept_num
+			where d.dept_name =#{param1}; 
+	</select>
+	
+	<insert id="AddRefer" parameterType="payment">
+	insert into payrefer(par_name,pm_idx) values
+		<foreach collection="resultList" item="item" separator="," >
+		(#{item},#{pm_idx})
+		</foreach>
+	</insert>
+	
+	<insert id="FileUpload">
+		insert into pfile(pm_idx,paf_oriFileName,paf_newFileName) values(
+		#{param1},#{param2},#{param3}
+		)
+	</insert>
+	<select id="GetDept" resultType="string">
+	select p.pos_level  from member m inner join `position` p 
+		on m.pos_num =p.pos_num where m.mem_id =#{param1};
+	</select>
+	
+	<insert id="insertLine">
+		insert into payline(pl_hp,pl_level,pm_idx) values(#{param2},#{param1},#{param3})
+	</insert>
+	
+	<select id="detailPayment_do" resultType="payment">
+		select * from payment p left join payholiday p2 on p.pm_idx =p2.pm_idx 
+		inner join payform p3 on p.pf_idx =p3.pf_idx 
+		inner join member m on p.mem_id =m.mem_id 
+		where p.pm_idx =#{param1};
+	</select>
+	
+	<select id="ReferDto" resultType="payment">
+		select m.mem_id,d.dept_name ,m.mem_name,p2.pos_name  from payrefer p 
+		inner join member m on m.mem_id =p.par_name 
+		inner join depart d on d.dept_num =m.dept_num 
+		inner JOIN position p2 on m.pos_num =p2.pos_num 
+		where p.pm_idx =#{param1};
+	</select>
+	
+	<select id="PmlineDto" resultType="payment">
+		select * from payline p 
+	inner join member m on p.pl_hp=m.mem_id
+	inner join depart d on m.dept_num =d.dept_num 
+		where pm_idx =#{param1};
+	</select>
+	
+	<select id="PayFile" resultType="payment">
+		select p2.paf_newFileName,p2.paf_oriFileName from pfile p2 where pm_idx =#{param1}
+	</select>
+
+		<update id="MySangSin" parameterType="payment">
+			update payment set pm_self=1,pm_state='진행',pm_bigo=#{pm_bigo} where pm_idx=#{pm_idx}	
+		</update>
+		
+		<select id="WhoFirst" resultType="string">
+			select pl_hp  from payline p where pm_idx =#{param1} LIMIT 1;
+		</select>
+		
+		<select id="SignImg" resultType="string">
+			select s.si_newFileName from sign s where s.mem_id=#{param1};
+		</select>
+		
+		<select id="MySign" resultType="string">
+			select s.si_newFileName from sign s where s.mem_id=#{param1};
+		</select>
+		
+		<select id="referPmIdx" resultType="string">
+			select pm_idx  from payrefer p where par_name =#{param1}
+		</select>
+		
+		<select id="openPayment" resultType="payment">
+			select p.pm_idx,p.pm_subject,p2.pf_cate,m.mem_name,p.pm_state 
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where p.pm_idx in
+				<foreach collection="referPmIdx" item="refer" separator="," open="(" close=")">
+				#{refer}
+				</foreach>
+
+				order by p.pm_idx desc limit 10 offset #{param1};
+		</select>
+
+		
+		<select id="OpensListCallTotal" resultType="int">
+			select count(p.pm_idx)
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where p.pm_idx in
+				<foreach collection="referPmIdx" item="refer" separator="," open="(" close=")">
+				#{refer}
+				</foreach>
+		</select>
+		
+		<select id="openSearchPayment" resultType="int">
+			select count(p.pm_idx)
+				from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where p.pm_idx in
+				<foreach collection="referPmIdx" item="refer" separator="," open="(" close=")">
+				#{refer}
+				</foreach>
+				<if test="param1.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param2},'%')
+				</if>
+				<if test="param1.equals('write')">
+				and m.mem_name=#{param2}
+				</if>
+				<if test="param1.equals('form')">
+				and p2.pf_cate  like CONCAT('%',#{param2},'%')
+				</if>
+		</select>
+		
+		<select id="openpaymentSearch_ajax" resultType="payment">
+				select p.pm_idx,p.pm_subject,p2.pf_cate,m.mem_name,p.pm_state 
+				from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where p.pm_idx in
+				<foreach collection="referPmIdx" item="refer" separator="," open="(" close=")">
+				#{refer}
+				</foreach>
+				<if test="param1.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param2},'%')
+				</if>
+				<if test="param1.equals('write')">
+				and m.mem_name=#{param2}
+				</if>
+				<if test="param1.equals('form')">
+				and p2.pf_cate  like CONCAT('%',#{param2},'%')
+				</if>
+				order by p.pm_idx desc limit 10 offset #{param3};
+		</select>
+		
+		
+		
+		<select id="pmSelfOne" resultType="string">
+			select pm_idx  from payment p where pm_self =1 and mem_id =#{param1}
+		</select>
+		
+
+		<select id="WaitPm" resultType="payment">
+			select p3.pl_idx ,p.pm_idx,p.pm_subject,p2.pf_cate,m.mem_name,p.pm_state,p3.pl_hp ,p3.pl_level,p3.pl_ch
+					from member m 
+					inner join payment p on m.mem_id =p.mem_id 
+					inner join payform p2 on p2.pf_idx  =p.pf_idx 
+					inner join payline p3 on p.pm_idx =p3.pm_idx 
+					where p.pm_state not in('등록','완료','반려') and p3.pl_ch =0
+					order by p.pm_idx desc
+		</select>
+		
+	
+		<update id="PmChange" parameterType="payment">
+			update payline set pl_ch=1 where pm_idx = #{pm_idx} and pl_hp=#{mem_id}
+		</update>
+		
+		<update id="PmBackChange" parameterType="payment">
+			update payline set pl_ch=2 where pm_idx = #{pm_idx} and pl_hp=#{mem_id}
+		</update>
+		
+		<select id="isNext" parameterType="payment" resultType="string">
+			select pl_hp from payline where pm_idx=#{pm_idx} and 
+				pl_idx=(select pl_idx from payline p where pl_hp=#{mem_id} and p.pm_idx=#{pm_idx})+1 
+		</select>
+		
+		<update id="GoPayment" parameterType="payment">
+			update payment set pm_bigo=#{pm_bigo} where pm_idx = #{pm_idx}
+		</update>
+		
+		<update id="FinishPayment" parameterType="payment">
+			update payment set pm_state='완료' where pm_idx=#{pm_idx}
+		</update>
+		
+		<update id="FinishBackPayment" parameterType="payment">
+			update payment set pm_state='반려' where pm_idx=#{pm_idx}
+		</update>
+		
+		
+		<select id="FinishAlarmSearch" parameterType="payment" resultType="string">
+		select p2.mem_id  from payment p2 where p2.pm_idx = #{pm_idx}
+		UNION  
+		select p.pl_hp from payline p where p.pm_idx = #{pm_idx} and p.pl_hp not in(#{mem_id});
+		</select>
+		
+		<select id="FinishBackAlarmSearch" parameterType="payment" resultType="string">
+		select p.mem_id  from payment p where p.pm_idx =#{pm_idx}   
+		UNION
+		select p.pl_hp  from payline p where p.pm_idx =#{pm_idx}
+		and p.pl_idx &lt; (select p3.pl_idx from payline p3 where p3.pl_hp=#{mem_id} and p3.pm_idx=#{pm_idx});
+		</select>
+		
+		<update id="PayFormUpCnt">
+			update payform set pf_count=pf_count+1 where pf_idx=#{pf_idx}
+		</update>
+		
+		<select id="writePayMent" resultType="string" parameterType="payment">
+			select mem_name from `member` m where m.mem_id =(select mem_id  from payment p2 where p2.pm_idx =#{pm_idx})
+		</select>
+		
+		<select id="writePayMent_memId" resultType="string" parameterType="payment">
+			select mem_id from `member` m where m.mem_id =(select mem_id  from payment p2 where p2.pm_idx =#{pm_idx})
+		</select>
+		
+		<select id="pl_hp" resultType="string">
+			select pl_hp from payline p where p.pm_idx =#{param1}
+		</select>
+		
+		<select id="AnotherSign" resultType="payment">
+			select s.mem_id,si_newFileName from sign s where s.mem_id in
+			<foreach collection="pl_hp" item="pl" separator="," open="(" close=")">
+			#{pl}
+			</foreach>
+		</select>
+		
+		<select id="MyWriteSign" resultType="string">
+			select si_newFileName from sign s where s.mem_id=#{param1}
+		</select>
+		
+		<select id="goingpayment_ajax" resultType="payment">
+			select (select m.mem_name  from member m where m.mem_id=p.mem_id) as mem_name,
+			p.pm_idx ,p.pm_subject ,p.pm_state,p2.pl_hp,p3.pf_cate,p.mem_id  from payment p
+				inner join payline p2 on p.pm_idx =p2.pm_idx 
+				inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state ='진행' and p2.pl_hp =#{param1}
+					order by p.pm_idx desc limit 10 offset #{param2};
+		</select>
+		
+		<select id="goingpaymentTotal_ajax" resultType="int">
+			select count(p.pm_idx) from payment p
+			inner join payline p2 on p.pm_idx =p2.pm_idx 
+			inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state ='진행' and p2.pl_hp =#{param1}
+		
+		</select>
+		
+		<select id="goingSearchTotal" resultType="int">
+			select count(p.pm_idx) from payment p
+			inner join payline p2 on p.pm_idx =p2.pm_idx 
+			inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state ='진행' and p2.pl_hp =#{param1}
+			<if test="param2.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param3},'%')
+			</if>
+			<if test="param2.equals('form')">
+				and p3.pf_cate  like CONCAT('%',#{param3},'%')
+			</if>
+		</select>
+		
+		<select id="goingSearch" resultType="payment">
+			select (select m.mem_name  from member m where m.mem_id=p.mem_id) as mem_name,
+			p.pm_idx ,p.pm_subject ,p.pm_state,p2.pl_hp,p3.pf_cate,p.mem_id  from payment p
+				inner join payline p2 on p.pm_idx =p2.pm_idx 
+				inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state ='진행' and p2.pl_hp =#{param1}
+				<if test="param2.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param3},'%')
+			</if>
+			<if test="param2.equals('form')">
+				and p3.pf_cate  like CONCAT('%',#{param3},'%')
+			</if>	
+					order by p.pm_idx desc limit 10 offset #{param4};
+		</select>
+		
+		
+		
+		<select id="finishpaymentTotal_ajax" resultType="int">
+			select count(p.pm_idx)  from payment p
+	inner join payline p2 on p.pm_idx =p2.pm_idx 
+	inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state in('완료','반려') and p2.pl_hp = #{param1}
+		</select>
+		
+		<select id="finishpayment_ajax" resultType="payment">
+			select (select m.mem_name  from member m where m.mem_id=p.mem_id) as mem_name,
+p.pm_idx ,p.pm_subject ,p.pm_state,p2.pl_hp,p3.pf_cate,p.mem_id  from payment p
+	inner join payline p2 on p.pm_idx =p2.pm_idx 
+	inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state in('완료','반려') and p2.pl_hp = #{param1}
+		order by p.pm_idx desc limit 10 offset #{param2};
+		</select>
+		
+		<select id="finishSearchTotal" resultType="int">
+			select count(p.pm_idx)  from payment p
+			inner join payline p2 on p.pm_idx =p2.pm_idx 
+			inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state in('완료','반려') and p2.pl_hp = #{param1}
+			<if test="param2.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param3},'%')
+			</if>
+			<if test="param2.equals('form')">
+				and p3.pf_cate  like CONCAT('%',#{param3},'%')
+			</if>	
+		</select>
+		
+		<select id="finishSearch" resultType="payment">
+			select (select m.mem_name  from member m where m.mem_id=p.mem_id) as mem_name,
+		p.pm_idx ,p.pm_subject ,p.pm_state,p2.pl_hp,p3.pf_cate,p.mem_id  from payment p
+			inner join payline p2 on p.pm_idx =p2.pm_idx 
+			inner join payform p3 on p.pf_idx =p3.pf_idx where p.pm_state in('완료','반려') and p2.pl_hp = #{param1}
+		<if test="param2.equals('title')">
+				and p.pm_subject like CONCAT('%',#{param3},'%')
+			</if>
+			<if test="param2.equals('form')">
+				and p3.pf_cate  like CONCAT('%',#{param3},'%')
+			</if>
+		order by p.pm_idx desc limit 10 offset #{param4};
+		
+		</select>
+		
+		<select id="selfSearchTotal" resultType="int">
+			select count(p.pm_idx)
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where m.mem_id =#{param1}
+				<if test="param2.equals('title')">
+					and p.pm_subject like CONCAT('%',#{param3},'%')
+				</if>
+				<if test="param2.equals('form')">
+					and p2.pf_cate  like CONCAT('%',#{param3},'%')
+				</if>
+		</select>
+		
+		<select id="selfSearch" resultType="payment">
+			select p.pm_idx,p.pm_subject,p2.pf_cate,m.mem_name,p.pm_state 
+			from member m 
+				inner join payment p on m.mem_id =p.mem_id 
+				inner join payform p2 on p2.pf_idx  =p.pf_idx where m.mem_id =#{param1}
+				<if test="param2.equals('title')">
+					and p.pm_subject like CONCAT('%',#{param3},'%')
+				</if>
+				<if test="param2.equals('form')">
+					and p2.pf_cate  like CONCAT('%',#{param3},'%')	
+				</if>
+					order by p.pm_idx desc limit 10 offset #{param4}
+		</select>
+		
+		<select id="getDownloadOrlName" resultType="string">
+			select paf_oriFileName  from pfile p where paf_newFileName =#{param1}
+		</select>
+		
+
+</mapper>
+
+
+
+
+

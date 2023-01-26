@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd"
+>
+<!-- 이 XML 을 어떤 interface 를 통해서 연결 할 건가? -->
+<mapper namespace="com.silver.donation.DonationHisDAO">
+	
+	<select id="donHistoryCall" resultType="hashmap">
+		SELECT dh_idx, dh_date, dh_write,dh_cate, dh_money 
+		FROM donhistory
+		order by dh_idx desc limit 10 offset #{param1}	
+	</select>
+	
+	<select id="searchdonationHisTotal" resultType="int">
+		select count(dh_idx) from donhistory d
+		<if test="param1.equals('title')">
+			WHERE dh_cate =#{param2}
+		</if>
+		<if test="param1.equals('write')">
+			WHERE dh_write=#{param2}
+		</if>
+	</select>
+	
+	<select id="searchHisdonation" resultType="donhistory">
+		SELECT dh_idx,dh_date,dh_write,dh_cate,dh_money from donhistory d 	
+		<if test="param1.equals('title')">
+			WHERE dh_cate=#{param2}
+		</if>
+		<if test="param1.equals('write')">
+			WHERE dh_write=#{param2}
+		</if>
+		order by dh_idx desc limit 10 offset #{param3}	
+	</select>
+	
+	<select id="totalCount" resultType="int">
+		SELECT COUNT(dh_idx) from donhistory
+	</select>
+	
+	<insert id="donWrite" parameterType="donhistory" useGeneratedKeys="true" keyColumn="dh_idx"
+	keyProperty="dh_idx">
+		INSERT into donhistory(dh_money, dh_cate, dh_goal, dh_date, dh_write)
+        VALUES(#{dh_money},#{dh_cate},#{dh_goal},#{dh_date},#{dh_write})
+	</insert>
+	
+	<insert id="photoInsert">
+		insert into filephoto(fp_oriFileName, fp_newFileName, dh_idx, fpc_idx)
+        values(#{param1},#{param2},#{param3}, 7);
+	</insert>
+	
+	<select id="donHisUpdateForm" 
+ 	resultType="donhistory" parameterType="int">
+ 		SELECT * from donhistory  where dh_idx =#{param1}
+ 	</select>
+ 	
+ 	<update id="donHisUpdate" parameterType="donhistory">
+ 		UPDATE donhistory SET 
+ 		dh_money=#{dh_money}, 
+ 		dh_cate=#{dh_cate}, 
+ 		dh_goal=#{dh_goal}, 
+ 		dh_date=#{dh_date}, 
+ 		dh_write=#{dh_write} 
+ 		WHERE dh_idx=#{dh_idx}
+ 	</update>
+ 	
+ 	<select id="findphoto" resultType="donhistory">
+	SELECT fp_idx, fp_oriFileName, fp_newFileName, fp_date, fpc_idx 
+	FROM filephoto 
+	WHERE dh_idx=#{param1}
+	</select>	
+ 	
+ 	<update id="photoUpdate">
+		UPDATE filephoto set 
+		fp_oriFileName=#{param1}, 
+		fp_newFileName=#{param2},
+		fpc_idx=7
+		where dh_idx=#{param3}
+	</update>
+	
+	<select id="donHisUpdateForm_File" resultType="string">
+		select f.fp_newFileName from filephoto f where fpc_idx =7 and dh_idx =#{param1};
+	</select>
+	
+	
+</mapper>
+
+
+
